@@ -10,7 +10,8 @@ import {
   aggregateCampaignData 
 } from './utils/csvParser';
 // 引入您的進階邏輯
-import { generateBidOptimizationPreview } from './components/bidOptimizer';
+import SummaryCard from './components/SummaryCard';
+import { generateBidOptimizationPreview } from './utils/bidOptimizer';
 import CampaignTable from './components/CampaignTable';
 import TrendChart from './components/TrendChart';
 import DateRangeControl from './components/DateRangeControl';

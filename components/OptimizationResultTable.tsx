@@ -11,6 +11,9 @@ const OptimizationResultTable: React.FC<Props> = ({ data, onBack }) => {
   
   const formatCurrency = (val: number) => `$${val.toFixed(2)}`;
   const formatPercent = (val: number) => `${val.toFixed(2)}%`;
+  
+  // 新增：版位溢價專用的格式化 (整數百分比)
+  const formatPlacementBid = (val: number) => `${val.toFixed(0)}%`;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -57,29 +60,50 @@ const OptimizationResultTable: React.FC<Props> = ({ data, onBack }) => {
                 </tr>
               </thead>
               <tbody className="text-sm divide-y divide-gray-100">
-                {data.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-2 whitespace-nowrap">{row.adType}</td>
-                    <td className="px-4 py-2 whitespace-nowrap max-w-[150px] truncate" title={row.campaignName}>{row.campaignName}</td>
-                    <td className="px-4 py-2 whitespace-nowrap max-w-[100px] truncate">{row.adGroupName}</td>
-                    <td className="px-4 py-2 whitespace-nowrap max-w-[100px] truncate">{row.entity}</td>
-                    <td className="px-4 py-2 whitespace-nowrap font-medium text-gray-800">{row.targeting}</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-gray-500">{row.matchType}</td>
-                    <td className="px-4 py-2 text-right text-gray-600">{formatCurrency(row.currentBid)}</td>
-                    <td className="px-4 py-2 text-right font-bold text-blue-600">{formatCurrency(row.suggestedBid)}</td>
-                    <td className={`px-4 py-2 text-right font-medium ${row.diffPercent > 0 ? 'text-green-600' : row.diffPercent < 0 ? 'text-red-600' : 'text-gray-400'}`}>
-                      {row.diffPercent > 0 ? '+' : ''}{row.diffPercent.toFixed(2)}%
-                    </td>
-                    <td className="px-4 py-2 text-right">{formatPercent(row.acos)}</td>
-                    <td className="px-4 py-2 text-right text-gray-500">{row.targetAcos}%</td>
-                    <td className="px-4 py-2 text-right">{formatCurrency(row.spend)}</td>
-                    <td className="px-4 py-2 text-right">{formatCurrency(row.sales)}</td>
-                    <td className="px-4 py-2 text-right">{row.impressions.toLocaleString()}</td>
-                    <td className="px-4 py-2 text-right">{row.clicks.toLocaleString()}</td>
-                    <td className="px-4 py-2 text-right">{row.orders}</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-gray-500 italic">{row.rule}</td>
-                  </tr>
-                ))}
+                {data.map((row) => {
+                  // 判斷是否為版位 (Placement)
+                  const isPlacement = row.entity.includes('Placement');
+                  
+                  return (
+                    <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-2 whitespace-nowrap">{row.adType}</td>
+                      <td className="px-4 py-2 whitespace-nowrap max-w-[150px] truncate" title={row.campaignName}>{row.campaignName}</td>
+                      <td className="px-4 py-2 whitespace-nowrap max-w-[100px] truncate">{row.adGroupName}</td>
+                      <td className="px-4 py-2 whitespace-nowrap max-w-[150px] truncate" title={row.entity}>
+                        {isPlacement ? (
+                           <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-medium text-xs border border-blue-100">
+                             {row.entity}
+                           </span>
+                        ) : row.entity}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap font-medium text-gray-800">{row.targeting}</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-gray-500">{row.matchType}</td>
+                      
+                      {/* 現值：如果是版位顯示 %，否則顯示 $ */}
+                      <td className="px-4 py-2 text-right text-gray-600">
+                        {isPlacement ? formatPlacementBid(row.currentBid) : formatCurrency(row.currentBid)}
+                      </td>
+                      
+                      {/* 建議值：如果是版位顯示 %，否則顯示 $ */}
+                      <td className="px-4 py-2 text-right font-bold text-blue-600">
+                        {isPlacement ? formatPlacementBid(row.suggestedBid) : formatCurrency(row.suggestedBid)}
+                      </td>
+                      
+                      <td className={`px-4 py-2 text-right font-medium ${row.diffPercent > 0 ? 'text-green-600' : row.diffPercent < 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                        {/* 版位差異顯示 pp (percentage points)，關鍵字顯示 % */}
+                        {row.diffPercent > 0 ? '+' : ''}{row.diffPercent.toFixed(2)}{isPlacement ? 'pp' : '%'}
+                      </td>
+                      <td className="px-4 py-2 text-right">{formatPercent(row.acos)}</td>
+                      <td className="px-4 py-2 text-right text-gray-500">{row.targetAcos}%</td>
+                      <td className="px-4 py-2 text-right">{formatCurrency(row.spend)}</td>
+                      <td className="px-4 py-2 text-right">{formatCurrency(row.sales)}</td>
+                      <td className="px-4 py-2 text-right">{row.impressions.toLocaleString()}</td>
+                      <td className="px-4 py-2 text-right">{row.clicks.toLocaleString()}</td>
+                      <td className="px-4 py-2 text-right">{row.orders}</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-gray-500 italic">{row.rule}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
