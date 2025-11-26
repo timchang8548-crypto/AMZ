@@ -1,7 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CampaignData, DateRange, MetricKey, DisplayMode, ColumnDef, BidOptimizerConfig, OptimizationResultRow } from './types';
-import { parseCSV, generateMockPreviousData, parsePlacementCSV, parseKeywordCSV, generateOptimizationPreview, calculateRecommendedBid, filterDataByDate, generateDailyChartData, aggregateCampaignData } from './utils/csvParser';
-import SummaryCard from './components/SummaryCard';
+import { 
+  parseCSV, 
+  generateMockPreviousData, 
+  parsePlacementCSVRaw, // <--- 改用這個
+  parseKeywordCSVRaw,   // <--- 改用這個
+  filterDataByDate, 
+  generateDailyChartData, 
+  aggregateCampaignData 
+} from './utils/csvParser';
+// 引入您的進階邏輯
+import { generateBidOptimizationPreview } from './components/bidOptimizer';
 import CampaignTable from './components/CampaignTable';
 import TrendChart from './components/TrendChart';
 import DateRangeControl from './components/DateRangeControl';
@@ -105,14 +114,20 @@ const App: React.FC = () => {
   };
 
   const handleOptimizationFiles = (placementText: string, keywordText: string) => {
-    if (!optimizerConfig) return;
-    const placementMap = parsePlacementCSV(placementText);
-    const keywordRows = parseKeywordCSV(keywordText);
-    const results = generateOptimizationPreview(keywordRows, placementMap, optimizerConfig);
-    setOptimizationResults(results);
-    setIsUploadModalOpen(false);
-    setShowOptimizationResults(true);
-  };
+  if (!optimizerConfig) return;
+
+  // 1. 使用剛剛新增的 "Raw" 解析器
+  const rawPlacements = parsePlacementCSVRaw(placementText);
+  const rawKeywords = parseKeywordCSVRaw(keywordText);
+
+  // 2. 呼叫進階邏輯 (這就是您的核心 ACOS 計算)
+  // 這會觸發 bidOptimizer.tsx 裡面的 calculatePlacementAdjustment 和 optimizeKeywordBid
+  const results = generateBidOptimizationPreview(rawKeywords, rawPlacements, optimizerConfig);
+
+  setOptimizationResults(results);
+  setIsUploadModalOpen(false);
+  setShowOptimizationResults(true);
+};
 
   const toggleMetric = (key: MetricKey) => {
     setSelectedMetrics(prev => {

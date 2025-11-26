@@ -492,3 +492,77 @@ export const generateOptimizationPreview = (
 export const generateMockPreviousData = (currentData: CampaignData[]): CampaignData[] => {
   return currentData.map(c => ({...c})); 
 };
+// 請加在 utils/csvParser.ts 檔案的最下方
+
+// 1. 引入 bidOptimizer 定義的介面 (這樣 TypeScript 才知道回傳格式)
+import { KeywordMetric, PlacementMetric } from '../components/bidOptimizer';
+
+// 輔助：確保數字轉換 (沿用您原本的 helper 或直接寫)
+const safeFloat = (val: any) => {
+  if (typeof val === 'number') return val;
+  const str = String(val || '').replace(/[$,%]/g, '');
+  return parseFloat(str) || 0;
+};
+
+// 2. 新增：解析原始版位資料 (給 bidOptimizer 用)
+export const parsePlacementCSVRaw = (csvText: string): PlacementMetric[] => {
+  const lines = csvText.split('\n').filter(l => l.trim() !== '');
+  const results: PlacementMetric[] = [];
+  
+  // 略過標頭，從第1行開始
+  for(let i=1; i<lines.length; i++) {
+    const line = lines[i];
+    // 簡單 CSV 分割 (處理引號內的逗號)
+    const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/^"|"$/g, ''));
+    
+    if (cols.length < 5) continue; // 簡單防呆
+
+    // 注意：請根據您的實際報表欄位順序調整 Index
+    // 假設順序：Placement(0), Campaign(1), Imp(2), Clicks(3), Cost(5)...
+    results.push({
+      placement: cols[0] || 'Unknown',
+      campaignName: cols[1] || 'Unknown',
+      impressions: safeFloat(cols[2]),
+      clicks: safeFloat(cols[3]),
+      spend: safeFloat(cols[5]),
+      sales: safeFloat(cols[8]), 
+      orders: safeFloat(cols[7]),
+      currentModifier: 0 // 報表通常沒有這個值，預設為 0
+    });
+  }
+  return results;
+};
+
+// 3. 新增：解析原始關鍵字資料 (給 bidOptimizer 用)
+export const parseKeywordCSVRaw = (csvText: string): KeywordMetric[] => {
+  const lines = csvText.split('\n').filter(l => l.trim() !== '');
+  const results: KeywordMetric[] = [];
+  
+  for(let i=1; i<lines.length; i++) {
+    const line = lines[i];
+    const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/^"|"$/g, ''));
+    
+    if (cols.length < 10) continue;
+
+    const sales = safeFloat(cols[13]);
+    const spend = safeFloat(cols[10]);
+    
+    results.push({
+      id: `kw-${i}`,
+      // 假設順序：State(0), Campaign(1), Match(2), Status(3), Keyword(4), Bid(5)...
+      campaignName: cols[1],
+      matchType: cols[2],
+      status: cols[3], 
+      keywordText: cols[4],
+      currentBid: safeFloat(cols[5]), 
+      impressions: safeFloat(cols[7]),
+      clicks: safeFloat(cols[8]),
+      spend: spend,
+      cpc: safeFloat(cols[11]),
+      orders: safeFloat(cols[12]),
+      sales: sales,
+      acos: sales > 0 ? (spend / sales) * 100 : 0
+    });
+  }
+  return results;
+};

@@ -1,5 +1,4 @@
-// src/types.ts
-
+// 通用指標 Keys
 export type MetricKey = 
   | 'impressions' | 'clicks' | 'orders' | 'units' 
   | 'ctr' | 'cvr' | 'cpc' | 'spend' | 'sales' 
@@ -8,7 +7,7 @@ export type MetricKey =
 
 export type DisplayMode = 'all' | 'active' | 'paused';
 
-// 優化器相關定義
+// 優化器設定 (Config)
 export type OptimizationMode = 'balance' | 'lower_acos' | 'boost_sales';
 export type LimitType = 'off' | 'min' | 'max' | 'custom' | 'dynamic';
 export type MultiplierType = 1 | 2 | 3;
@@ -36,12 +35,13 @@ export interface BidOptimizerConfig {
   maxPlacementIncrease?: number;
   maxPlacementDecrease?: number;
   
-  // 相容舊欄位
+  // 相容欄位 (Optional)
   strategy?: string; 
   minBid?: number;
   maxBid?: number;
 }
 
+// 優化結果行 (Result Row)
 export interface OptimizationResultRow {
   id: string;
   adType: string;
@@ -73,6 +73,7 @@ export interface OptimizationResultRow {
   targetAcos: number;
 }
 
+// 其他基礎介面
 export interface DateRange {
   startDate: Date;
   endDate: Date;
