@@ -1,0 +1,5 @@
+{
+  "name": "Amazon Ads Analytics Dashboard",
+  "description": "A comprehensive dashboard for analyzing Amazon Advertising campaigns with data import, date range comparison, and performance visualization.",
+  "requestFramePermissions": []
+}
