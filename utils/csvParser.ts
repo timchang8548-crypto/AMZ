@@ -1,5 +1,4 @@
 import { CampaignData, ColumnDef } from '../types';
-// 確保引用路徑正確 (皆在 utils 資料夾下)
 import { KeywordMetric, PlacementMetric } from './bidOptimizer';
 
 // ------------------------------------------------------------------
@@ -30,7 +29,7 @@ const parseDate = (dateStr: string): Date | null => {
 const normalizeHeader = (header: string): string => {
   const cleanHeader = header.trim();
   
-  // 1. 精確對照表 (包含您提供的特殊欄位)
+  // 1. 精確對照表
   const map: Record<string, string> = {
     // 基礎欄位
     'Date': 'date', 'date': 'date',
@@ -56,14 +55,14 @@ const normalizeHeader = (header: string): string => {
     
     // 版位與關鍵字特定
     'Placement': 'placement', 'Campaign Placement': 'placement',
-    'Bid': 'maxBid', 'Max Bid': 'maxBid', 'Keyword Bid': 'maxBid', 'Target bid(USD)': 'maxBid', // <--- 加入您的欄位
-    'Bid adjustment': 'bidAdjustment', // <--- 加入版位溢價欄位
+    'Bid': 'maxBid', 'Max Bid': 'maxBid', 'Keyword Bid': 'maxBid', 'Target bid(USD)': 'maxBid',
+    'Bid adjustment': 'bidAdjustment',
     
     'Targeting': 'targeting', 
     'Keyword': 'keywordText', 'Keyword Text': 'keywordText', 
     'Customer Search Term': 'query', 
     'Targeting Expression': 'targeting',
-    'Automatic targeting groups': 'keywordText', // <--- 加入您的自動廣告欄位
+    'Automatic targeting groups': 'keywordText',
     
     'Match Type': 'matchType',
     
@@ -104,16 +103,41 @@ export const parseCSV = (csvText: string): { data: CampaignData[], columns: Colu
   const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
   const headerKeyMap = headers.map(normalizeHeader);
   
+  // 【修正】定義完整的欄位列表，確保與 App.tsx 一致
   const definedColumns: ColumnDef[] = [
-    { id: 'campaignName', label: 'Campaign', isFixed: true, isVisible: true, type: 'text', width: 250 },
-    { id: 'status', label: 'Status', isFixed: true, isVisible: true, type: 'text', width: 100 },
-    { id: 'spend', label: 'Spend', isFixed: false, isVisible: true, type: 'currency', width: 120 },
-    { id: 'sales', label: 'Sales', isFixed: false, isVisible: true, type: 'currency', width: 120 },
-    { id: 'acos', label: 'ACOS', isFixed: false, isVisible: true, type: 'percent', width: 100 },
-    { id: 'roas', label: 'ROAS', isFixed: false, isVisible: true, type: 'number', width: 100 },
-    { id: 'orders', label: 'Orders', isFixed: false, isVisible: true, type: 'number', width: 100 },
+    // 1. 基礎資訊
+    { id: 'campaignName', label: 'Campaign Name', isFixed: true, isVisible: true, type: 'text', width: 220 },
+    { id: 'status', label: 'Status', isFixed: true, isVisible: true, type: 'text', width: 90 },
+    { id: 'portfolio', label: 'Portfolio', isFixed: false, isVisible: true, type: 'text', width: 120 },
+    { id: 'targetingType', label: 'Targeting Type', isFixed: false, isVisible: true, type: 'text', width: 110 },
+    { id: 'biddingStrategy', label: 'Strategy', isFixed: false, isVisible: true, type: 'text', width: 130 },
+    { id: 'budget', label: 'Budget', isFixed: false, isVisible: true, type: 'currency', width: 90 },
+    { id: 'startDate', label: 'Start Date', isFixed: false, isVisible: true, type: 'date', width: 100 },
+    { id: 'endDate', label: 'End Date', isFixed: false, isVisible: true, type: 'date', width: 100 },
+
+    // 2. 核心表現
+    { id: 'impressions', label: 'Impressions', isFixed: false, isVisible: true, type: 'number', width: 110 },
     { id: 'clicks', label: 'Clicks', isFixed: false, isVisible: true, type: 'number', width: 100 },
-    { id: 'impressions', label: 'Impressions', isFixed: false, isVisible: true, type: 'number', width: 120 },
+    { id: 'ctr', label: 'CTR', isFixed: false, isVisible: true, type: 'percent', width: 90 },
+    { id: 'spend', label: 'Spend', isFixed: false, isVisible: true, type: 'currency', width: 110 },
+    { id: 'cpc', label: 'CPC', isFixed: false, isVisible: true, type: 'currency', width: 90 },
+
+    // 3. 轉換與銷售
+    { id: 'orders', label: 'Orders', isFixed: false, isVisible: true, type: 'number', width: 90 },
+    { id: 'units', label: 'Units', isFixed: false, isVisible: true, type: 'number', width: 90 },
+    { id: 'sales', label: 'Sales', isFixed: false, isVisible: true, type: 'currency', width: 110 },
+    { id: 'cvr', label: 'CVR', isFixed: false, isVisible: true, type: 'percent', width: 90 },
+
+    // 4. 效率與進階指標
+    { id: 'acos', label: 'ACOS', isFixed: false, isVisible: true, type: 'percent', width: 90 },
+    { id: 'roas', label: 'ROAS', isFixed: false, isVisible: true, type: 'number', width: 90 },
+    { id: 'cpa', label: 'CPA', isFixed: false, isVisible: false, type: 'currency', width: 90 },
+    { id: 'aov', label: 'AOV', isFixed: false, isVisible: false, type: 'currency', width: 90 },
+    { id: 'cpm', label: 'CPM', isFixed: false, isVisible: false, type: 'currency', width: 90 },
+    { id: 'rpc', label: 'RPC', isFixed: false, isVisible: false, type: 'currency', width: 90 },
+    { id: 'actc', label: 'aCTC', isFixed: false, isVisible: false, type: 'number', width: 90 },
+    { id: 'percentOfSales', label: '% of Sales', isFixed: false, isVisible: false, type: 'percent', width: 100 },
+    { id: 'percentOfSpend', label: '% of Spend', isFixed: false, isVisible: false, type: 'percent', width: 100 },
   ];
 
   const tempRows: CampaignData[] = [];
@@ -152,12 +176,16 @@ export const parseCSV = (csvText: string): { data: CampaignData[], columns: Colu
     row.spend = row.spend || 0;
     row.sales = row.sales || 0;
     row.impressions = row.impressions || 0;
+    row.units = row.units || 0;
 
+    // 計算衍生指標
     row.acos = row.sales > 0 ? (row.spend / row.sales) * 100 : 0;
     row.roas = row.spend > 0 ? row.sales / row.spend : 0;
     row.ctr = row.impressions > 0 ? (row.clicks / row.impressions) * 100 : 0;
     row.cpc = row.clicks > 0 ? row.spend / row.clicks : 0;
     row.cvr = row.clicks > 0 ? (row.orders / row.clicks) * 100 : 0;
+    
+    // 進階指標
     row.cpa = row.orders > 0 ? row.spend / row.orders : 0;
     row.aov = row.orders > 0 ? row.sales / row.orders : 0;
     row.rpc = row.clicks > 0 ? row.sales / row.clicks : 0;
@@ -194,8 +222,18 @@ export const aggregateCampaignData = (data: CampaignData[]): CampaignData[] => {
   data.forEach(row => {
     const key = row.campaignName || 'Unknown';
     if (!aggMap[key]) {
+      // 【修正】初始化時，保留靜態欄位資料 (Start Date, End Date, Portfolio, Budget 等)
       aggMap[key] = {
-        id: key, campaignName: key, status: row.status, portfolio: row.portfolio, targetingType: row.targetingType, biddingStrategy: row.biddingStrategy, budget: row.budget,
+        id: key, 
+        campaignName: key, 
+        status: row.status, 
+        portfolio: row.portfolio, 
+        targetingType: row.targetingType, 
+        biddingStrategy: row.biddingStrategy, 
+        budget: row.budget,
+        startDate: row.startDate, 
+        endDate: row.endDate,
+        
         clicks: 0, orders: 0, spend: 0, sales: 0, impressions: 0, units: 0,
       } as CampaignData;
     }
@@ -206,6 +244,7 @@ export const aggregateCampaignData = (data: CampaignData[]): CampaignData[] => {
     aggMap[key].impressions += (row.impressions || 0);
     aggMap[key].units += (row.units || 0);
   });
+
   return Object.values(aggMap).map(row => {
     row.ctr = row.impressions > 0 ? (row.clicks / row.impressions) * 100 : 0;
     row.cvr = row.clicks > 0 ? (row.orders / row.clicks) * 100 : 0;
@@ -265,7 +304,7 @@ export const calculateRecommendedBid = () => ({ bid: 0, rule: '' });
 export const generateOptimizationPreview = () => ([]);
 
 // ------------------------------------------------------------------
-// NEW: Raw Parsers (修正版：針對無 Campaign Name 的情況)
+// Raw Parsers
 // ------------------------------------------------------------------
 
 export const parsePlacementCSVRaw = (csvText: string): PlacementMetric[] => {
@@ -288,8 +327,6 @@ export const parsePlacementCSVRaw = (csvText: string): PlacementMetric[] => {
         return idx !== undefined ? cols[idx] : undefined;
     };
 
-    // 【修改】如果不包含 Campaign Name，預設為 "Current Campaign"
-    // 這樣可以讓單一廣告活動的報表也能跑出數據
     const campaignName = getVal('campaignName') || 'Current Campaign';
     const placementName = getVal('placement') || 'Unknown';
 
@@ -301,7 +338,6 @@ export const parsePlacementCSVRaw = (csvText: string): PlacementMetric[] => {
       spend: safeFloat(getVal('spend')),
       sales: safeFloat(getVal('sales')), 
       orders: safeFloat(getVal('orders')),
-      // 【修改】讀取 Bid Adjustment (版位溢價)
       currentModifier: safeFloat(getVal('bidAdjustment'))
     });
   }
@@ -328,7 +364,6 @@ export const parseKeywordCSVRaw = (csvText: string): KeywordMetric[] => {
         return idx !== undefined ? cols[idx] : undefined;
     };
 
-    // 【修改】如果不包含 Campaign Name，預設為 "Current Campaign"
     const campaignName = getVal('campaignName') || 'Current Campaign';
 
     const sales = safeFloat(getVal('sales'));
@@ -340,7 +375,6 @@ export const parseKeywordCSVRaw = (csvText: string): KeywordMetric[] => {
       matchType: getVal('matchType') || '-',
       status: getVal('status') || 'ENABLED', 
       keywordText: getVal('keywordText') || getVal('targeting') || getVal('query') || '-',
-      // 【修改】正確讀取 Target bid (Max Bid)
       currentBid: safeFloat(getVal('maxBid')) || 0, 
       impressions: safeFloat(getVal('impressions')),
       clicks: safeFloat(getVal('clicks')),

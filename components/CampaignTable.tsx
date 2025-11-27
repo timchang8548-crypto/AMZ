@@ -54,6 +54,14 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
       : (Number(valB) || 0) - (Number(valA) || 0);
   });
 
+  // [新增] 日期格式化 helper
+  const formatDate = (val: any) => {
+    if (!val) return '-';
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return String(val);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
   const renderStackedCell = (value: any, prevValue: any, type: string, inverse = false, isFooter = false) => {
     if (value === undefined || value === null || value === '') return <span className="text-gray-300">-</span>;
 
@@ -105,16 +113,13 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
     );
   };
 
-  // --- 樣式計算核心 ---
   const getStickyStyle = (index: number, isHeader = false, isFooter = false, colWidth: number) => {
-    // 1. 一般滾動欄位 (非固定)
     if (index >= fixedColumns.length) {
         if (isHeader) return { position: 'sticky' as const, top: 0, zIndex: 40, backgroundColor: '#f9fafb', width: colWidth };
         if (isFooter) return { position: 'sticky' as const, bottom: 0, zIndex: 40, backgroundColor: '#f3f4f6', width: colWidth };
         return { width: colWidth };
     }
 
-    // 2. 固定欄位：計算 left 偏移量
     let left = CHECKBOX_WIDTH; 
     for (let i = 0; i < index; i++) {
        left += (fixedColumns[i].width || 150);
@@ -122,14 +127,8 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
 
     const isLastFixed = index === fixedColumns.length - 1;
 
-    // 3. Z-Index 層級設定 (關鍵修復點)
-    // 左上角(表頭+固定) = 50 (最高)
-    // 左下角(表尾+固定) = 50 (最高)
-    // 左側(內容+固定) = 30 (比一般內容高，但比表頭低)
-    // 上方(表頭+滾動) = 40 (比內容高)
     const zIndex = isHeader ? 50 : (isFooter ? 50 : 30);
     
-    // 4. 背景色設定 (關鍵修復點：必須是不透明)
     const bgColor = isHeader ? '#f9fafb' : (isFooter ? '#f3f4f6' : 'var(--row-bg, #ffffff)');
 
     const style: React.CSSProperties = {
@@ -145,7 +144,6 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
        borderRight: isLastFixed ? '1px solid #e5e7eb' : 'none', 
     };
 
-    // 5. 陰影效果
     if (isLastFixed) {
         style.boxShadow = '4px 0 8px -2px rgba(0, 0, 0, 0.1)';
         style.clipPath = 'inset(0 -15px 0 0)'; 
@@ -173,7 +171,6 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
         <table className="min-w-full divide-y divide-gray-200" style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
           <thead className="bg-gray-50">
             <tr>
-              {/* Checkbox Header */}
               <th 
                 className="px-4 py-3 text-center border-b border-gray-200 sticky left-0 top-0 z-50 bg-gray-50"
                 style={{ width: CHECKBOX_WIDTH, minWidth: CHECKBOX_WIDTH, maxWidth: CHECKBOX_WIDTH }}
@@ -212,7 +209,6 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
                 className="hover:bg-gray-50 transition-colors group"
                 style={{ '--row-bg': '#f9fafb' } as React.CSSProperties}
               >
-                {/* Checkbox Body */}
                 <td 
                   className="px-4 py-3 text-center sticky left-0 z-30 border-b border-gray-100" 
                   style={{ 
@@ -229,9 +225,6 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
                   const colWidth = col.width || 150;
                   const style = getStickyStyle(idx, false, false, colWidth);
                   
-                  // 根據欄位類型決定是否換行
-                  // 文字欄位 (Campaign Name): break-words, whitespace-normal
-                  // 數值欄位: whitespace-nowrap (保持單行)
                   const isTextColumn = col.id === 'campaignName';
                   const wrapClass = isTextColumn ? 'whitespace-normal break-words' : 'whitespace-nowrap';
 
@@ -260,6 +253,14 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
                         </div>
                       );
                   } 
+                  // [新增] 日期類型欄位的渲染處理
+                  else if (col.type === 'date') {
+                      content = (
+                        <div className="flex items-center justify-end h-full text-sm text-gray-600">
+                          {formatDate(row.curr[col.id])}
+                        </div>
+                      );
+                  }
                   else if (col.id === 'state') {
                        content = <span className="px-2 py-0.5 rounded border border-gray-300 text-xs font-bold text-gray-500 bg-gray-50">SP</span>;
                   }
@@ -268,7 +269,8 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
                         row.curr[col.id], 
                         row.prev?.[col.id], 
                         col.type, 
-                        ['cpc', 'acos', 'cpa', 'spend'].includes(col.id)
+                        // [修改] 增加 'cpa' 和 'cpm' 到 inverse 邏輯
+                        ['cpc', 'acos', 'cpa', 'spend', 'cpm'].includes(col.id)
                       );
                   }
 
@@ -286,7 +288,6 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
             ))}
           </tbody>
 
-          {/* Footer */}
           {sortedData.length > 0 && (
              <tfoot className="bg-gray-100 font-bold border-t-2 border-gray-300">
                <tr>

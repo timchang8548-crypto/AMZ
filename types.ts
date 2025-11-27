@@ -92,6 +92,7 @@ export interface ColumnDef {
   label: string;
   isFixed?: boolean;
   isVisible: boolean;
-  type: 'text' | 'number' | 'currency' | 'percent';
+  // 新增 'date'
+  type: 'text' | 'number' | 'currency' | 'percent' | 'date'; 
   width?: number;
 }

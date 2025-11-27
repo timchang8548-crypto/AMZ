@@ -38,12 +38,41 @@ const METRIC_CONFIGS: Record<MetricKey, { key: MetricKey, label: string, color: 
 };
 
 const DEFAULT_COLUMNS: ColumnDef[] = [
-  { id: 'campaignName', label: 'Campaign ID', isFixed: true, isVisible: true, type: 'text', width: 200 },
-  { id: 'status', label: 'Status', isFixed: true, isVisible: true, type: 'text', width: 100 },
-  { id: 'orders', label: 'Orders', isFixed: false, isVisible: true, type: 'number', width: 100 },
-  { id: 'sales', label: 'Sales', isFixed: false, isVisible: true, type: 'currency', width: 120 },
-  { id: 'spend', label: 'Spend', isFixed: false, isVisible: true, type: 'currency', width: 120 },
-  { id: 'acos', label: 'ACOS', isFixed: false, isVisible: true, type: 'percent', width: 100 },
+  // --- 基礎資訊 (Basic Info) ---
+  { id: 'campaignName', label: 'Campaign Name', isFixed: true, isVisible: true, type: 'text', width: 220 },
+  { id: 'status', label: 'Status', isFixed: true, isVisible: true, type: 'text', width: 90 },
+  { id: 'portfolio', label: 'Portfolio', isFixed: false, isVisible: true, type: 'text', width: 120 },
+  { id: 'targetingType', label: 'Targeting', isFixed: false, isVisible: true, type: 'text', width: 100 },
+  { id: 'biddingStrategy', label: 'Strategy', isFixed: false, isVisible: true, type: 'text', width: 140 },
+  { id: 'budget', label: 'Budget', isFixed: false, isVisible: true, type: 'currency', width: 100 },
+  { id: 'startDate', label: 'Start Date', isFixed: false, isVisible: true, type: 'date', width: 110 }, // 新增 date 類型
+  { id: 'endDate', label: 'End Date', isFixed: false, isVisible: true, type: 'date', width: 110 },     // 新增 date 類型
+
+  // --- 核心表現 (Core Performance) ---
+  { id: 'impressions', label: 'Impressions', isFixed: false, isVisible: true, type: 'number', width: 110 },
+  { id: 'clicks', label: 'Clicks', isFixed: false, isVisible: true, type: 'number', width: 100 },
+  { id: 'ctr', label: 'CTR', isFixed: false, isVisible: true, type: 'percent', width: 90 },
+  { id: 'spend', label: 'Spend', isFixed: false, isVisible: true, type: 'currency', width: 110 },
+  { id: 'cpc', label: 'CPC', isFixed: false, isVisible: true, type: 'currency', width: 90 },
+  
+  // --- 轉換與銷售 (Conversion & Sales) ---
+  { id: 'orders', label: 'Orders', isFixed: false, isVisible: true, type: 'number', width: 90 },
+  { id: 'units', label: 'Units', isFixed: false, isVisible: true, type: 'number', width: 90 },
+  { id: 'sales', label: 'Sales', isFixed: false, isVisible: true, type: 'currency', width: 110 },
+  { id: 'cvr', label: 'CVR', isFixed: false, isVisible: true, type: 'percent', width: 90 },
+  
+  // --- 效率指標 (Efficiency Metrics) ---
+  { id: 'acos', label: 'ACOS', isFixed: false, isVisible: true, type: 'percent', width: 90 },
+  { id: 'roas', label: 'ROAS', isFixed: false, isVisible: true, type: 'number', width: 90 },
+  { id: 'cpa', label: 'CPA', isFixed: false, isVisible: true, type: 'currency', width: 90 }, // Cost Per Acquisition
+  { id: 'aov', label: 'AOV', isFixed: false, isVisible: true, type: 'currency', width: 90 }, // Average Order Value
+  
+  // --- 進階指標 (Advanced Metrics) ---
+  { id: 'cpm', label: 'CPM', isFixed: false, isVisible: false, type: 'currency', width: 90 }, // Cost Per Mille
+  { id: 'rpc', label: 'RPC', isFixed: false, isVisible: false, type: 'currency', width: 90 }, // Revenue Per Click
+  { id: 'actc', label: 'aCTC', isFixed: false, isVisible: false, type: 'number', width: 90 }, // Avg Conversion Time/Click (Clicks/Orders)
+  { id: 'percentOfSales', label: '% of Sales', isFixed: false, isVisible: false, type: 'percent', width: 100 },
+  { id: 'percentOfSpend', label: '% of Spend', isFixed: false, isVisible: false, type: 'percent', width: 100 },
 ];
 
 const INITIAL_CSV_MOCK = `State,Campaign,Status,Targeting,Portfolio,Budget,Impressions,Clicks,CTR,Spend,CPC,Orders,Sales,ACOS,ROAS
