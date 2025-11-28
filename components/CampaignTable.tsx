@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CampaignData, SortDirection, SortField, DisplayMode, ColumnDef } from '../types';
 import { ArrowUp, ArrowDown, PlayCircle, PauseCircle, Wand2, FolderPlus } from 'lucide-react';
 
@@ -23,6 +23,14 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
 }) => {
   const [sortField, setSortField] = useState<SortField>('spend');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  
+  // [新增] 追蹤選取的廣告活動 ID
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // 當資料來源改變時（例如切換日期），重置選取狀態
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [currentData]);
 
   const visibleColumns = columns.filter(c => c.isVisible);
   const fixedColumns = visibleColumns.filter(c => c.isFixed);
@@ -54,7 +62,36 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
       : (Number(valB) || 0) - (Number(valA) || 0);
   });
 
-  // [新增] 日期格式化 helper
+  // [新增] 處理單選
+  const handleSelectOne = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
+  // [新增] 處理全選
+  const handleSelectAll = () => {
+    if (selectedIds.size === sortedData.length && sortedData.length > 0) {
+      setSelectedIds(new Set()); // 取消全選
+    } else {
+      const allIds = sortedData.map(item => item.curr.id);
+      setSelectedIds(new Set(allIds));
+    }
+  };
+
+  // [新增] 處理優化按鈕點擊
+  const handleOptimizerClick = () => {
+    if (selectedIds.size === 0) {
+      alert("請先勾選至少一個廣告活動以進行優化");
+      return;
+    }
+    onOpenOptimizer();
+  };
+
   const formatDate = (val: any) => {
     if (!val) return '-';
     const d = new Date(val);
@@ -128,7 +165,6 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
     const isLastFixed = index === fixedColumns.length - 1;
 
     const zIndex = isHeader ? 50 : (isFooter ? 50 : 30);
-    
     const bgColor = isHeader ? '#f9fafb' : (isFooter ? '#f3f4f6' : 'var(--row-bg, #ffffff)');
 
     const style: React.CSSProperties = {
@@ -152,16 +188,25 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
     return style;
   };
 
+  const hasSelection = selectedIds.size > 0;
+
   return (
     <div className="bg-white rounded border border-gray-200 shadow-sm overflow-hidden mt-4">
       <div className="flex items-center gap-2 p-3 bg-white border-b border-gray-200 sticky left-0 z-10">
-         <div className="text-sm text-gray-500 mr-2">已選擇 {sortedData.length} 個項目</div>
-         <button className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50">
+         {/* [修改] 顯示真實的選取數量 */}
+         <div className="text-sm text-gray-500 mr-2">
+            已選擇 {selectedIds.size} 個項目
+         </div>
+         
+         <button className={`flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 transition-opacity ${!hasSelection ? 'opacity-50 cursor-not-allowed' : ''}`}>
             <FolderPlus size={14} /> 加入優化組合
          </button>
+         
+         {/* [修改] 加入 disabled 樣式與點擊檢查 */}
          <button 
-            onClick={onOpenOptimizer}
-            className="flex items-center gap-1 px-3 py-1.5 bg-teal-800 text-white rounded text-sm hover:bg-teal-900"
+            onClick={handleOptimizerClick}
+            disabled={!hasSelection}
+            className={`flex items-center gap-1 px-3 py-1.5 bg-teal-800 text-white rounded text-sm hover:bg-teal-900 transition-all ${!hasSelection ? 'opacity-50 cursor-not-allowed bg-gray-400 hover:bg-gray-400' : ''}`}
          >
             <Wand2 size={14} /> 優化出價
          </button>
@@ -171,11 +216,18 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
         <table className="min-w-full divide-y divide-gray-200" style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
           <thead className="bg-gray-50">
             <tr>
+              {/* Checkbox Header */}
               <th 
                 className="px-4 py-3 text-center border-b border-gray-200 sticky left-0 top-0 z-50 bg-gray-50"
                 style={{ width: CHECKBOX_WIDTH, minWidth: CHECKBOX_WIDTH, maxWidth: CHECKBOX_WIDTH }}
               >
-                  <input type="checkbox" className="rounded border-gray-300" />
+                  {/* [修改] 實作全選功能 */}
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-gray-300 cursor-pointer" 
+                    checked={sortedData.length > 0 && selectedIds.size === sortedData.length}
+                    onChange={handleSelectAll}
+                  />
               </th>
               
               {displayColumns.map((col, idx) => {
@@ -206,9 +258,10 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
             {sortedData.map((row) => (
               <tr 
                 key={row.curr.id} 
-                className="hover:bg-gray-50 transition-colors group"
-                style={{ '--row-bg': '#f9fafb' } as React.CSSProperties}
+                className={`hover:bg-gray-50 transition-colors group ${selectedIds.has(row.curr.id) ? 'bg-blue-50/30' : ''}`}
+                style={{ '--row-bg': selectedIds.has(row.curr.id) ? '#eff6ff' : '#f9fafb' } as React.CSSProperties}
               >
+                {/* Checkbox Body */}
                 <td 
                   className="px-4 py-3 text-center sticky left-0 z-30 border-b border-gray-100" 
                   style={{ 
@@ -218,7 +271,13 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
                       backgroundColor: 'var(--row-bg, white)' 
                   }}
                 >
-                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  {/* [修改] 實作單選功能 */}
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" 
+                    checked={selectedIds.has(row.curr.id)}
+                    onChange={() => handleSelectOne(row.curr.id)}
+                  />
                 </td>
 
                 {displayColumns.map((col, idx) => {
@@ -253,7 +312,6 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
                         </div>
                       );
                   } 
-                  // [新增] 日期類型欄位的渲染處理
                   else if (col.type === 'date') {
                       content = (
                         <div className="flex items-center justify-end h-full text-sm text-gray-600">
@@ -269,7 +327,6 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
                         row.curr[col.id], 
                         row.prev?.[col.id], 
                         col.type, 
-                        // [修改] 增加 'cpa' 和 'cpm' 到 inverse 邏輯
                         ['cpc', 'acos', 'cpa', 'spend', 'cpm'].includes(col.id)
                       );
                   }
@@ -288,6 +345,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
             ))}
           </tbody>
 
+          {/* Footer */}
           {sortedData.length > 0 && (
              <tfoot className="bg-gray-100 font-bold border-t-2 border-gray-300">
                <tr>

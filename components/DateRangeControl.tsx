@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, ChevronDown, X, ArrowRightLeft, Check } from 'lucide-react';
+import { Calendar, ChevronDown, X, ArrowRightLeft, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DateRange, DisplayMode } from '../types';
 
 interface DateRangeControlProps {
@@ -25,15 +25,15 @@ const DateRangeControl: React.FC<DateRangeControlProps> = ({
   minDate,
   maxDate
 }) => {
-  // State for modals
   const [activePicker, setActivePicker] = useState<PickerType | null>(null);
   const [isDisplayModeOpen, setIsDisplayModeOpen] = useState(false);
   
-  // Temporary state for the active picker
   const [tempRange, setTempRange] = useState<DateRange>(value);
+  // [新增] 控制月曆當前顯示的月份
+  const [viewDate, setViewDate] = useState<Date>(new Date());
 
-  // Close dropdowns on outside click
   const containerRef = useRef<HTMLDivElement>(null);
+  
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -58,17 +58,25 @@ const DateRangeControl: React.FC<DateRangeControlProps> = ({
     }
   };
 
-  // -- Handlers --
-
   const handleOpenPicker = (type: PickerType) => {
+    // 當開啟時，將視圖移動到當前選取的開始日期，若無則移動到最早有效日期 (minDate)
+    const initialViewDate = type === 'main' 
+      ? value.startDate 
+      : (compareRange ? compareRange.startDate : new Date());
+    
+    // 如果選取日期有效，就用選取日期；否則如果 minDate 有效，就用 minDate
+    if (initialViewDate && !isNaN(initialViewDate.getTime())) {
+        setViewDate(new Date(initialViewDate));
+    } else if (minDate && !isNaN(minDate.getTime())) {
+        setViewDate(new Date(minDate));
+    }
+
     if (type === 'main') {
       setTempRange(value);
     } else {
-      // If opening compare picker, set temp range to current compare range OR default previous period
       if (compareRange) {
         setTempRange(compareRange);
       } else {
-        // Default logic for new comparison: Previous period based on current value
         const duration = value.endDate.getTime() - value.startDate.getTime();
         const end = new Date(value.startDate);
         end.setDate(end.getDate() - 1);
@@ -81,7 +89,6 @@ const DateRangeControl: React.FC<DateRangeControlProps> = ({
   };
 
   const handleEnableCompare = () => {
-    // Enable comparison with a default "Previous Period"
     const duration = value.endDate.getTime() - value.startDate.getTime();
     const end = new Date(value.startDate);
     end.setDate(end.getDate() - 1);
@@ -102,17 +109,24 @@ const DateRangeControl: React.FC<DateRangeControlProps> = ({
     setActivePicker(null);
   };
 
-  // Check if a specific date is disabled
   const isDateDisabled = (date: Date) => {
-    if (minDate && date < minDate) return true;
-    if (maxDate && date > maxDate) return true;
+    // 將時間歸零以進行純日期比較
+    const d = new Date(date); d.setHours(0,0,0,0);
+    
+    if (minDate) {
+        const min = new Date(minDate); min.setHours(0,0,0,0);
+        if (d < min) return true;
+    }
+    if (maxDate) {
+        const max = new Date(maxDate); max.setHours(0,0,0,0);
+        if (d > max) return true;
+    }
     return false;
   };
 
   const handleDateClick = (date: Date) => {
     if (isDateDisabled(date)) return;
 
-    // Range selection logic
     if (!tempRange.startDate || (tempRange.startDate && tempRange.endDate && tempRange.startDate.getTime() !== tempRange.endDate.getTime())) {
       setTempRange({ startDate: date, endDate: date });
     } else {
@@ -124,7 +138,6 @@ const DateRangeControl: React.FC<DateRangeControlProps> = ({
     }
   };
 
-  // Presets for Comparison
   const handlePreset = (mode: 'previous' | 'lastYear') => {
     if (activePicker === 'compare') {
       const start = new Date(value.startDate);
@@ -152,11 +165,21 @@ const DateRangeControl: React.FC<DateRangeControlProps> = ({
     return date >= tempRange.startDate && date <= tempRange.endDate;
   };
 
+  // [新增] 切換月份
+  const changeMonth = (offset: number) => {
+    const newDate = new Date(viewDate);
+    newDate.setMonth(newDate.getMonth() + offset);
+    setViewDate(newDate);
+  };
+
   const renderCalendar = () => {
-    // Render static months for demo: Nov 2025, Dec 2025
-    const renderMonth = (year: number, month: number, title: string) => {
+    const renderMonth = (baseDate: Date) => {
+      const year = baseDate.getFullYear();
+      const month = baseDate.getMonth();
+      const monthTitle = baseDate.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long' });
+
       const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const firstDay = new Date(year, month, 1).getDay();
+      const firstDay = new Date(year, month, 1).getDay(); // 0 is Sunday
       
       const days = [];
       for (let i = 0; i < firstDay; i++) days.push(<div key={`empty-${i}`} className="p-1"></div>);
@@ -185,7 +208,7 @@ const DateRangeControl: React.FC<DateRangeControlProps> = ({
           if (isStart && isEnd) bgClass += ' rounded-full';
           else if (isStart) bgClass += ' rounded-l-full';
           else if (isEnd) bgClass += ' rounded-r-full';
-          else if (selected) bgClass = 'bg-teal-50'; // Light teal for range
+          else if (selected) bgClass = 'bg-teal-50';
         }
 
         days.push(
@@ -202,7 +225,7 @@ const DateRangeControl: React.FC<DateRangeControlProps> = ({
 
       return (
         <div>
-          <div className="text-center font-bold text-gray-700 mb-2">{title}</div>
+          <div className="text-center font-bold text-gray-700 mb-2">{monthTitle}</div>
           <div className="grid grid-cols-7 gap-1 text-xs text-center mb-1 text-gray-400">
             <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
           </div>
@@ -213,8 +236,12 @@ const DateRangeControl: React.FC<DateRangeControlProps> = ({
       );
     };
 
+    // 計算右側月份
+    const nextMonthDate = new Date(viewDate);
+    nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+
     return (
-      <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-50 flex flex-col w-[600px]">
+      <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-50 flex flex-col w-[650px]">
          <div className="flex border-b border-gray-200">
            {/* Sidebar */}
            <div className="w-40 bg-gray-50 p-2 border-r border-gray-200 flex flex-col gap-1">
@@ -229,14 +256,23 @@ const DateRangeControl: React.FC<DateRangeControlProps> = ({
              )}
            </div>
            
-           {/* Calendar */}
-           <div className="flex-1 p-4">
-              <div className="flex justify-between items-center mb-4">
-                 <h4 className="text-sm font-bold">選擇{activePicker === 'main' ? '日期' : '比較'}範圍</h4>
+           {/* Calendar Area */}
+           <div className="flex-1 p-4 relative">
+              <div className="flex justify-between items-center mb-4 px-2">
+                 {/* [新增] 月份切換按鈕 */}
+                 <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-gray-100 rounded-full text-gray-500">
+                    <ChevronLeft size={20} />
+                 </button>
+                 <span className="text-sm font-bold text-gray-800">
+                    {activePicker === 'main' ? '選擇日期範圍' : '選擇比較範圍'}
+                 </span>
+                 <button onClick={() => changeMonth(1)} className="p-1 hover:bg-gray-100 rounded-full text-gray-500">
+                    <ChevronRight size={20} />
+                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-6">
-                 {renderMonth(2025, 10, "十一月 2025")}
-                 {renderMonth(2025, 11, "十二月 2025")}
+              <div className="grid grid-cols-2 gap-8">
+                 {renderMonth(viewDate)}
+                 {renderMonth(nextMonthDate)}
               </div>
            </div>
          </div>
@@ -263,7 +299,6 @@ const DateRangeControl: React.FC<DateRangeControlProps> = ({
 
       {/* 2. Compare Controls */}
       {!compareRange ? (
-        // Collapsed State: Just a trigger button
         <button 
           onClick={handleEnableCompare}
           className="flex items-center justify-center w-8 h-8 bg-white border border-gray-300 rounded text-gray-500 hover:text-blue-600 hover:border-blue-400 shadow-sm transition-colors"
@@ -272,9 +307,7 @@ const DateRangeControl: React.FC<DateRangeControlProps> = ({
           <ArrowRightLeft size={14} />
         </button>
       ) : (
-        // Expanded State: Compare Picker + Display Mode + Close
         <>
-          {/* Compare Picker Button */}
           <div 
             className="flex items-center gap-2 bg-white border border-yellow-400 text-gray-900 rounded px-3 py-1.5 text-sm cursor-pointer shadow-sm hover:bg-yellow-50 transition-colors"
             onClick={() => handleOpenPicker('compare')}
@@ -283,7 +316,6 @@ const DateRangeControl: React.FC<DateRangeControlProps> = ({
             <span>{formatDate(compareRange.startDate)} - {formatDate(compareRange.endDate)}</span>
           </div>
 
-          {/* Display Mode Dropdown */}
           <div className="relative">
             <div 
               className="flex items-center justify-between bg-white border border-gray-300 rounded px-3 py-1.5 text-sm text-gray-700 w-32 cursor-pointer shadow-sm hover:bg-gray-50"
@@ -321,7 +353,6 @@ const DateRangeControl: React.FC<DateRangeControlProps> = ({
             )}
           </div>
 
-          {/* Close Button */}
           <button 
             onClick={handleDisableCompare}
             className="text-gray-400 hover:text-red-500 p-1.5 hover:bg-gray-100 rounded transition-colors"
@@ -331,7 +362,6 @@ const DateRangeControl: React.FC<DateRangeControlProps> = ({
         </>
       )}
 
-      {/* Render the Active Picker Modal if any */}
       {activePicker && renderCalendar()}
     </div>
   );

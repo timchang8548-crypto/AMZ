@@ -3,13 +3,12 @@ import { CampaignData, DateRange, MetricKey, DisplayMode, ColumnDef, BidOptimize
 import { 
   parseCSV, 
   generateMockPreviousData, 
-  parsePlacementCSVRaw, // <--- 改用這個
-  parseKeywordCSVRaw,   // <--- 改用這個
+  parsePlacementCSVRaw, 
+  parseKeywordCSVRaw, 
   filterDataByDate, 
   generateDailyChartData, 
   aggregateCampaignData 
 } from './utils/csvParser';
-// 引入您的進階邏輯
 import SummaryCard from './components/SummaryCard';
 import { generateBidOptimizationPreview } from './utils/bidOptimizer';
 import CampaignTable from './components/CampaignTable';
@@ -38,39 +37,30 @@ const METRIC_CONFIGS: Record<MetricKey, { key: MetricKey, label: string, color: 
 };
 
 const DEFAULT_COLUMNS: ColumnDef[] = [
-  // --- 基礎資訊 (Basic Info) ---
   { id: 'campaignName', label: 'Campaign Name', isFixed: true, isVisible: true, type: 'text', width: 220 },
   { id: 'status', label: 'Status', isFixed: true, isVisible: true, type: 'text', width: 90 },
   { id: 'portfolio', label: 'Portfolio', isFixed: false, isVisible: true, type: 'text', width: 120 },
   { id: 'targetingType', label: 'Targeting', isFixed: false, isVisible: true, type: 'text', width: 100 },
   { id: 'biddingStrategy', label: 'Strategy', isFixed: false, isVisible: true, type: 'text', width: 140 },
   { id: 'budget', label: 'Budget', isFixed: false, isVisible: true, type: 'currency', width: 100 },
-  { id: 'startDate', label: 'Start Date', isFixed: false, isVisible: true, type: 'date', width: 110 }, // 新增 date 類型
-  { id: 'endDate', label: 'End Date', isFixed: false, isVisible: true, type: 'date', width: 110 },     // 新增 date 類型
-
-  // --- 核心表現 (Core Performance) ---
+  { id: 'startDate', label: 'Start Date', isFixed: false, isVisible: true, type: 'date', width: 110 },
+  { id: 'endDate', label: 'End Date', isFixed: false, isVisible: true, type: 'date', width: 110 },
   { id: 'impressions', label: 'Impressions', isFixed: false, isVisible: true, type: 'number', width: 110 },
   { id: 'clicks', label: 'Clicks', isFixed: false, isVisible: true, type: 'number', width: 100 },
   { id: 'ctr', label: 'CTR', isFixed: false, isVisible: true, type: 'percent', width: 90 },
   { id: 'spend', label: 'Spend', isFixed: false, isVisible: true, type: 'currency', width: 110 },
   { id: 'cpc', label: 'CPC', isFixed: false, isVisible: true, type: 'currency', width: 90 },
-  
-  // --- 轉換與銷售 (Conversion & Sales) ---
   { id: 'orders', label: 'Orders', isFixed: false, isVisible: true, type: 'number', width: 90 },
   { id: 'units', label: 'Units', isFixed: false, isVisible: true, type: 'number', width: 90 },
   { id: 'sales', label: 'Sales', isFixed: false, isVisible: true, type: 'currency', width: 110 },
   { id: 'cvr', label: 'CVR', isFixed: false, isVisible: true, type: 'percent', width: 90 },
-  
-  // --- 效率指標 (Efficiency Metrics) ---
   { id: 'acos', label: 'ACOS', isFixed: false, isVisible: true, type: 'percent', width: 90 },
   { id: 'roas', label: 'ROAS', isFixed: false, isVisible: true, type: 'number', width: 90 },
-  { id: 'cpa', label: 'CPA', isFixed: false, isVisible: true, type: 'currency', width: 90 }, // Cost Per Acquisition
-  { id: 'aov', label: 'AOV', isFixed: false, isVisible: true, type: 'currency', width: 90 }, // Average Order Value
-  
-  // --- 進階指標 (Advanced Metrics) ---
-  { id: 'cpm', label: 'CPM', isFixed: false, isVisible: false, type: 'currency', width: 90 }, // Cost Per Mille
-  { id: 'rpc', label: 'RPC', isFixed: false, isVisible: false, type: 'currency', width: 90 }, // Revenue Per Click
-  { id: 'actc', label: 'aCTC', isFixed: false, isVisible: false, type: 'number', width: 90 }, // Avg Conversion Time/Click (Clicks/Orders)
+  { id: 'cpa', label: 'CPA', isFixed: false, isVisible: true, type: 'currency', width: 90 },
+  { id: 'aov', label: 'AOV', isFixed: false, isVisible: true, type: 'currency', width: 90 },
+  { id: 'cpm', label: 'CPM', isFixed: false, isVisible: false, type: 'currency', width: 90 },
+  { id: 'rpc', label: 'RPC', isFixed: false, isVisible: false, type: 'currency', width: 90 },
+  { id: 'actc', label: 'aCTC', isFixed: false, isVisible: false, type: 'number', width: 90 },
   { id: 'percentOfSales', label: '% of Sales', isFixed: false, isVisible: false, type: 'percent', width: 100 },
   { id: 'percentOfSpend', label: '% of Spend', isFixed: false, isVisible: false, type: 'percent', width: 100 },
 ];
@@ -138,26 +128,42 @@ const App: React.FC = () => {
     }, 200);
   };
 
+  // [新增] 計算資料的最早與最晚日期，用於限制日期選擇器
+  const { dataMinDate, dataMaxDate } = useMemo(() => {
+    if (!data || data.length === 0) return { dataMinDate: undefined, dataMaxDate: undefined };
+    
+    let min = new Date(8640000000000000);
+    let max = new Date(-8640000000000000);
+    let hasDate = false;
+
+    data.forEach(item => {
+      // 優先使用 'date' (每日報表)，若無則嘗試使用 'startDate'
+      const d = item.date ? new Date(item.date) : (item.startDate ? new Date(item.startDate) : null);
+      if (d && !isNaN(d.getTime())) {
+        if (d < min) min = d;
+        if (d > max) max = d;
+        hasDate = true;
+      }
+    });
+
+    if (!hasDate) return { dataMinDate: undefined, dataMaxDate: undefined };
+    return { dataMinDate: min, dataMaxDate: max };
+  }, [data]);
+
   const handleOptimizerConfig = (config: BidOptimizerConfig) => {
     setOptimizerConfig(config);
     setIsUploadModalOpen(true);
   };
 
   const handleOptimizationFiles = (placementText: string, keywordText: string) => {
-  if (!optimizerConfig) return;
-
-  // 1. 使用剛剛新增的 "Raw" 解析器
-  const rawPlacements = parsePlacementCSVRaw(placementText);
-  const rawKeywords = parseKeywordCSVRaw(keywordText);
-
-  // 2. 呼叫進階邏輯 (這就是您的核心 ACOS 計算)
-  // 這會觸發 bidOptimizer.tsx 裡面的 calculatePlacementAdjustment 和 optimizeKeywordBid
-  const results = generateBidOptimizationPreview(rawKeywords, rawPlacements, optimizerConfig);
-
-  setOptimizationResults(results);
-  setIsUploadModalOpen(false);
-  setShowOptimizationResults(true);
-};
+    if (!optimizerConfig) return;
+    const rawPlacements = parsePlacementCSVRaw(placementText);
+    const rawKeywords = parseKeywordCSVRaw(keywordText);
+    const results = generateBidOptimizationPreview(rawKeywords, rawPlacements, optimizerConfig);
+    setOptimizationResults(results);
+    setIsUploadModalOpen(false);
+    setShowOptimizationResults(true);
+  };
 
   const toggleMetric = (key: MetricKey) => {
     setSelectedMetrics(prev => {
@@ -172,10 +178,8 @@ const App: React.FC = () => {
   };
 
   const { filteredData, aggregatedData, aggregatedPrevData, chartData, currentTotals, prevTotals } = useMemo(() => {
-    // 1. Current Range
     const filtered = filterDataByDate(data, dateRange.startDate, dateRange.endDate);
-    const aggregated = aggregateCampaignData(filtered); // This returns data with 'id' = campaign name
-    
+    const aggregated = aggregateCampaignData(filtered);
     const dailyChart = generateDailyChartData(data, dateRange.startDate, dateRange.endDate);
 
     const calcTotals = (dataset: CampaignData[]) => {
@@ -202,8 +206,6 @@ const App: React.FC = () => {
     };
 
     const currTots = calcTotals(filtered);
-
-    // 2. Comparison Range
     let prevTots = currTots; 
     let aggPrev: CampaignData[] = [];
 
@@ -213,14 +215,7 @@ const App: React.FC = () => {
         prevTots = calcTotals(filteredPrev);
     }
 
-    return { 
-        filteredData: filtered, 
-        aggregatedData: aggregated, 
-        aggregatedPrevData: aggPrev, // Correct aggregated data for prev range
-        chartData: dailyChart, 
-        currentTotals: currTots,
-        prevTotals: prevTots 
-    };
+    return { filteredData: filtered, aggregatedData: aggregated, aggregatedPrevData: aggPrev, chartData: dailyChart, currentTotals: currTots, prevTotals: prevTots };
   }, [data, dateRange, compareRange]);
 
   const showCompare = !!compareRange;
@@ -289,6 +284,9 @@ const App: React.FC = () => {
             onCompareChange={setCompareRange}
             displayMode={displayMode}
             onDisplayModeChange={setDisplayMode}
+            // [修改] 傳入計算出的最小與最大日期
+            minDate={dataMinDate}
+            maxDate={dataMaxDate}
           />
           <div className="h-6 w-px bg-gray-300 mx-1"></div>
           
