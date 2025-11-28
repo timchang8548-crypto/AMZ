@@ -16,20 +16,26 @@ interface SummaryCardProps {
   isSelected?: boolean;
   selectionColor?: string;
   onClick?: () => void;
+  // [新增] 允許指定小數點位數
+  decimals?: number;
 }
 
-const formatNumber = (num: number, isCurrency: boolean, decimals = 2) => {
+const formatNumber = (num: number, isCurrency: boolean, decimals?: number) => {
+  // 如果有傳入 decimals 則使用，否則根據是否為貨幣決定 (貨幣2位，其他0位)
+  const d = decimals !== undefined ? decimals : (isCurrency ? 2 : 0);
+
   if (isCurrency) {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
+      minimumFractionDigits: d,
+      maximumFractionDigits: d,
     }).format(num);
   }
   return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: decimals
+    // [修改] 強制設定最小位數，確保 4.00 不會變成 4
+    minimumFractionDigits: d, 
+    maximumFractionDigits: d
   }).format(num);
 };
 
@@ -45,7 +51,8 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
   displayMode = 'all',
   isSelected = false,
   selectionColor = '#3b82f6',
-  onClick
+  onClick,
+  decimals // [新增]
 }) => {
   const diff = value - prevValue;
   const percentChange = prevValue !== 0 ? (diff / prevValue) * 100 : 0;
@@ -64,12 +71,12 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
   const renderCompareContent = () => {
     if (!showCompare) return <div className="h-[18px] mt-1"></div>;
 
-    // Clean up: Hide if both 0 to avoid noise
     if (prevValue === 0 && value === 0) {
        return <div className="h-[18px] mt-1"></div>;
     }
 
-    const formattedPrev = `${prefix}${formatNumber(prevValue, isCurrency, isCurrency ? 2 : 0)}${suffix}`;
+    // [修改] 這裡也套用相同的 decimals 格式化規則
+    const formattedPrev = `${prefix}${formatNumber(prevValue, isCurrency, decimals)}${suffix}`;
     const formattedPercent = `${Math.abs(percentChange).toFixed(2)}%`;
 
     if (displayMode === 'value') {
@@ -128,7 +135,8 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
       
       <div className="mt-1 pl-1">
         <div className="text-2xl font-bold text-gray-900 tracking-tight">
-          {prefix}{formatNumber(value, isCurrency, isCurrency ? 2 : 0)}{suffix}
+          {/* [修改] 傳入 decimals */}
+          {prefix}{formatNumber(value, isCurrency, decimals)}{suffix}
         </div>
         {renderCompareContent()}
       </div>

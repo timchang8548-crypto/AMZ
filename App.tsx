@@ -9,6 +9,7 @@ import {
   generateDailyChartData, 
   aggregateCampaignData 
 } from './utils/csvParser';
+// 引入您的進階邏輯
 import SummaryCard from './components/SummaryCard';
 import { generateBidOptimizationPreview } from './utils/bidOptimizer';
 import CampaignTable from './components/CampaignTable';
@@ -128,7 +129,6 @@ const App: React.FC = () => {
     }, 200);
   };
 
-  // [新增] 計算資料的最早與最晚日期，用於限制日期選擇器
   const { dataMinDate, dataMaxDate } = useMemo(() => {
     if (!data || data.length === 0) return { dataMinDate: undefined, dataMaxDate: undefined };
     
@@ -137,7 +137,6 @@ const App: React.FC = () => {
     let hasDate = false;
 
     data.forEach(item => {
-      // 優先使用 'date' (每日報表)，若無則嘗試使用 'startDate'
       const d = item.date ? new Date(item.date) : (item.startDate ? new Date(item.startDate) : null);
       if (d && !isNaN(d.getTime())) {
         if (d < min) min = d;
@@ -220,7 +219,8 @@ const App: React.FC = () => {
 
   const showCompare = !!compareRange;
 
-  const renderSummaryCard = (key: MetricKey, title: string, prefix = '', suffix = '', isCurrency = false, inverse = false) => (
+  // [修改] 傳入 decimals 參數 (倒數第二個參數為 decimals)
+  const renderSummaryCard = (key: MetricKey, title: string, prefix = '', suffix = '', isCurrency = false, inverse = false, decimals?: number) => (
     <SummaryCard 
       metricKey={key}
       title={title} 
@@ -235,6 +235,7 @@ const App: React.FC = () => {
       isSelected={selectedMetrics.includes(key)}
       selectionColor={METRIC_CONFIGS[key].color}
       onClick={() => toggleMetric(key)}
+      decimals={decimals} // 傳遞小數點設定
     />
   );
 
@@ -284,7 +285,6 @@ const App: React.FC = () => {
             onCompareChange={setCompareRange}
             displayMode={displayMode}
             onDisplayModeChange={setDisplayMode}
-            // [修改] 傳入計算出的最小與最大日期
             minDate={dataMinDate}
             maxDate={dataMaxDate}
           />
@@ -320,17 +320,26 @@ const App: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-          {renderSummaryCard('impressions', '曝光數 Impressions')}
-          {renderSummaryCard('clicks', '點擊數 Clicks')}
-          {renderSummaryCard('orders', '訂單數 Orders')}
-          {renderSummaryCard('units', '銷售件數 Units')}
-          {renderSummaryCard('ctr', '點擊率 CTR', '', '%', false)}
-          {renderSummaryCard('cvr', '轉換率 CVR', '', '%', false)}
+          {/* 指定 0 小數位 */}
+          {renderSummaryCard('impressions', '曝光數 Impressions', '', '', false, false, 0)}
+          {renderSummaryCard('clicks', '點擊數 Clicks', '', '', false, false, 0)}
+          {renderSummaryCard('orders', '訂單數 Orders', '', '', false, false, 0)}
+          {renderSummaryCard('units', '銷售件數 Units', '', '', false, false, 0)}
+          
+          {/* 指定 2 小數位 (比率) */}
+          {renderSummaryCard('ctr', '點擊率 CTR', '', '%', false, false, 2)}
+          {renderSummaryCard('cvr', '轉換率 CVR', '', '%', false, false, 2)}
+          
+          {/* 貨幣類 (預設就是 2 位，但顯式傳入也沒問題) */}
           {renderSummaryCard('cpc', '每次點擊成本 CPC', '$', '', true, true)}
           {renderSummaryCard('spend', '花費 Spend', '$', '', true, true)}
           {renderSummaryCard('sales', '銷售額 Sales', '$', '', true)}
-          {renderSummaryCard('acos', 'ACOS', '', '%', false, true)}
-          {renderSummaryCard('roas', 'ROAS', '', '', false)}
+          
+          {/* 指定 2 小數位 */}
+          {renderSummaryCard('acos', 'ACOS', '', '%', false, true, 2)}
+          {renderSummaryCard('roas', 'ROAS', '', '', false, false, 2)}
+          
+          {/* 貨幣類 */}
           {renderSummaryCard('cpa', '每次訂單成本 CPA', '$', '', true, true)}
         </div>
 
